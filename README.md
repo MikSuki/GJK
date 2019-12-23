@@ -1,5 +1,4 @@
 # GJK
----
  2d collision detection with GJK
  
  DEMO: https://miksuki.github.io/GJK/
