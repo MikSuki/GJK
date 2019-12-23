@@ -112,25 +112,6 @@ function mouseup() {
     })
 }
 
-function collider(a, b) {
-    var pos = []
-    for (let i = 0; i < a.vertex.length; ++i) {
-        // let pos = []
-        for (let j = 0; j < b.vertex.length; ++j) {
-            pos.push({
-                x: a.vertex[i].x - b.vertex[j].x,
-                y: a.vertex[i].y - b.vertex[j].y,
-            })
-        }
-    }
-    if (ptInPolygon(origin, pos))
-        return true
-    return false
-}
-
-
-
-
 
 function ptInPolygon(pt, polygon) {
     let i = 0,
