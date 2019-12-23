@@ -1,4 +1,4 @@
-const gjk = function (shape1, shape2) {
+var gjk = function (shape1, shape2) {
     if (shape1.vertex === undefined || shape2.vertex === undefined ||
         shape1.x === undefined || shape2.y === undefined ||
         shape1.vertex.length < 3 || shape2.vertex.length < 3) throw ('shape error')

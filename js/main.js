@@ -54,51 +54,6 @@ class Polygon {
 
 }
 
-class Square {
-    constructor(x, y, w, color) {
-        this.x = x
-        this.y = y
-        this.w = w
-        this.color = color
-        this.x1 = 0
-        this.x2 = 0
-        this.y1 = 0
-        this.y2 = 0
-        this.offsetX = 0
-        this.offsetY = 0
-        this.isSelect = false
-
-        this.update()
-    }
-
-    draw(ctx) {
-        ctx.fillStyle = this.color
-        ctx.fillRect(
-            this.x1,
-            this.y1,
-            this.x2 - this.x1,
-            this.y2 - this.y1
-        )
-    }
-
-    isclick(x, y) {
-        if (x >= this.x1 && x <= this.x2
-            && y >= this.y1 && y <= this.y2) {
-            this.offsetX = x - this.x
-            this.offsetY = y - this.y
-            this.isSelect = true
-        }
-    }
-
-    update() {
-        this.x1 = this.x - this.w / 2
-        this.x2 = this.x + this.w / 2
-        this.y1 = this.y - this.w / 2
-        this.y2 = this.y + this.w / 2
-    }
-
-}
-
 window.onload = function () {
     var canvas = document.getElementById('canvas')
     ctx = canvas.getContext('2d')
