@@ -14,8 +14,17 @@ class Polygon {
         this.offsetX = 0
         this.offsetY = 0
         this.isSelect = false
+        this.axis = [
+            { x: 0, y: -3 },
+            { x: 0, y: 3 },
+            { x: w, y: 3 },
+            { x: w, y: -3 },
+        ]
+        this.axis.forEach(e => {
+            e.size = Math.sqrt(e.x ** 2 + e.y ** 2)
+            e.rotation = Math.atan(e.y / e.x)
+        })
 
-        //this.update()
         this.getVertex()
     }
 
@@ -24,11 +33,17 @@ class Polygon {
         this.vertex = []
         for (let i = 0; i < this.vertex_num; ++i) {
             this.vertex.push({
-                x: this.x + this.w * Math.cos(rad),
-                y: this.y + this.w * Math.sin(rad)
+                x: this.x + this.w * Math.cos(rad - this.rotation),
+                y: this.y + this.w * Math.sin(rad - this.rotation)
             })
             rad += (360 / this.vertex_num) / 180 * Math.PI
         }
+        rad = this.rotation
+        // axis
+        this.axis.forEach(e => {
+            e.x = e.size * Math.cos(e.rotation - rad)
+            e.y = e.size * Math.sin(e.rotation - rad)
+        })
     }
 
     draw(ctx) {
@@ -38,20 +53,40 @@ class Polygon {
         for (let i = 1; i < this.vertex_num; ++i)
             ctx.lineTo(this.vertex[i].x, this.vertex[i].y)
         ctx.fill()
-    }
 
-    isclick(x, y) {
-        if (ptInPolygon({ x: x, y: y }, this.vertex)) {
-            this.offsetX = x - this.x
-            this.offsetY = y - this.y
-            return true
+        // axis
+        ctx.fillStyle = '#000000'
+        ctx.beginPath()
+        ctx.moveTo(this.vertex[0].x + this.axis[0].x, this.vertex[0].y + this.axis[0].y)
+        for (let i = 1; i < this.axis.length; ++i)
+            ctx.lineTo(this.vertex[0].x + this.axis[i].x, this.vertex[0].y + this.axis[i].y)
+        ctx.fill()
+
+
+        ctx.fillStyle = '#000000'
+
+        for (let i = 0; i < this.vertex_num; ++i) {
+            ctx.beginPath()
+            ctx.moveTo(this.x, this.y)
+            ctx.lineTo(this.vertex[i].x, this.vertex[i].y)
+            ctx.stroke()
         }
     }
 
-    update() {
-        this.getVertex()
+    isclick(x, y) {
+        if (ptInPolygon({ x: x - this.vertex[0].x, y: y - this.vertex[0].y }, this.axis)) {
+            this.offsetX = x - this.x
+            this.offsetY = y - this.y
+            this.isSelect = 'axis'
+            return true
+        }
+        if (ptInPolygon({ x: x, y: y }, this.vertex)) {
+            this.offsetX = x - this.x
+            this.offsetY = y - this.y
+            this.isSelect = 'move'
+            return true
+        }
     }
-
 }
 
 window.onload = function () {
@@ -63,11 +98,9 @@ window.onload = function () {
     canvas.onmousemove = mousemove
     canvas.onmouseup = mouseup
 
-    s.push(new Polygon(300, 300, 100, 7, "#00FF00"))
-    s.push(new Polygon(300, 300, 100, 5, "#FF0000"))
+    s.push(new Polygon(300, 300, 80, 4, "#00FF00"))
+    s.push(new Polygon(550, 300, 120, 4, "#FF0000"))
 
-
-    transparency = gjk(s[0], s[1]) ? 0.6 : 1
 
     requestAnimationFrame(render)
 }
@@ -84,22 +117,45 @@ function render() {
 
 function mouseclick(e) {
     s.every(ele => {
-        if (ele.isclick(e.clientX, e.clientY)) {
-            ele.isSelect = true
+        if (ele.isclick(e.clientX, e.clientY))
             return false
-        }
         return true
     })
 }
 
 function mousemove(e) {
     s.forEach(ele => {
-        if (ele.isSelect) {
+        if (ele.isSelect == 'axis') {
+            let [x, y] = [ele.x - e.clientX, ele.y - e.clientY]
+            let dot = -x
+            let len = Math.sqrt(x ** 2 + y ** 2)
+            let rad = Math.acos(dot / len)
+            if (y < 0) rad = - rad
+            ele.rotation = rad
+            ele.getVertex()
+            transparency = gjk(s[0], s[1]) ? 0.6 : 1
+        }
+        if (ele.isSelect == 'move') {
+            let shapeA = ele
+            let shapeB = ele === s[0] ? s[1] : s[0]
             ele.x = e.clientX - ele.offsetX
             ele.y = e.clientY - ele.offsetY
-            ele.update()
-            // transparency = collider(s[0], s[1]) ? 0.6 : 1
-            transparency = gjk(s[0], s[1]) ? 0.6 : 1
+            ele.getVertex()
+            if (gjk(shapeA, shapeB)) {
+                let num = 0
+                transparency = 0.6
+                for (let i = 0; i < shapeA.vertex.length; ++i) {
+                    if (ptInPolygon(shapeA.vertex[i], shapeB.vertex))
+                        ++num
+                }
+                switch (num) {
+                    case 1:
+
+                        break
+                }
+            }
+            else
+                transparency = 1
         }
     })
 
