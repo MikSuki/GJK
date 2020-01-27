@@ -233,7 +233,7 @@ window.onload = function () {
     wall.push(new Wall(-w * 0.05, h * 0.5, w * 0.1, h * 1.2))
     wall.push(new Wall(w * 1.05, h * 0.5, w * 0.1, h * 1.2))
 
-    for (let i = 0; i < 30; ++i) {
+    for (let i = 0; i < 50; ++i) {
         let [d1, d2] = [Math.random() + 0.01, Math.random() + 0.01]
         if (d1 > 0.9) d1 = 0.9
         if (d2 > 0.9) d2 = 0.9
@@ -310,9 +310,13 @@ function update() {
         for (let i = start; i < moved_s.length; ++i) {
             let polygonA = s[moved_s[i]].shape
             for (let j = 0; j < s.length; ++j) {
-                if (/*s[j] === selected || */moved_s.indexOf(j) != -1) continue
+                if (moved_s.indexOf(j) != -1) continue
                 let polygonB = s[j].shape,
-                    depth = gjk(polygonA, polygonB);
+                    dist = Math.sqrt((polygonA.x - polygonB.x) ** 2 + (polygonA.y - polygonB.y) ** 2),
+                    depth;
+                if (dist >= polygonA.width + polygonB.width)
+                    continue
+                depth = gjk(polygonA, polygonB)
                 if (depth != -1) {
                     if (!flag) {
                         flag = true
