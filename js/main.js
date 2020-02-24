@@ -47,6 +47,7 @@ var t = 0
 class Rigidbody {
     constructor(position, linearVelocity, angle, angularVelocity, force, shape) {
         this.position = position
+        this.movement = { x: 0, y: 0 }
         this.linearVelocity = linearVelocity
         this.angle = angle
         this.angularVelocity = angularVelocity
@@ -164,11 +165,11 @@ class Polygon {
         //     ctx.fillText(i + 1, this.vertex[i].x, this.vertex[i].y)
 
         // axis
-        ctx.beginPath()
-        ctx.moveTo(this.vertex[0].x + this.axis[0].x, this.vertex[0].y + this.axis[0].y)
-        for (let i = 1; i < this.axis.length; ++i)
-            ctx.lineTo(this.vertex[0].x + this.axis[i].x, this.vertex[0].y + this.axis[i].y)
-        ctx.fill()
+        // ctx.beginPath()
+        // ctx.moveTo(this.vertex[0].x + this.axis[0].x, this.vertex[0].y + this.axis[0].y)
+        // for (let i = 1; i < this.axis.length; ++i)
+        //     ctx.lineTo(this.vertex[0].x + this.axis[i].x, this.vertex[0].y + this.axis[i].y)
+        // ctx.fill()
 
         return
 
@@ -232,45 +233,22 @@ window.onload = function () {
     wall.push(new Wall(-w * 0.05, h * 0.5, w * 0.1, h * 1.2))
     wall.push(new Wall(w * 1.05, h * 0.5, w * 0.1, h * 1.2))
 
+    for (let i = 0; i < 50; ++i) {
+        let [d1, d2] = [Math.random() + 0.01, Math.random() + 0.01]
+        if (d1 > 0.9) d1 = 0.9
+        if (d2 > 0.9) d2 = 0.9
+        s.push(new Rigidbody(
+            { x: w * d1, y: h * d2 },
+            { x: 0, y: 0 },
+            0,
+            0,
+            { x: 0, y: 0 },
+            new Polygon(w * (Math.floor(Math.random() * 5) + 1) * 0.02, 1, Math.floor(Math.random() * 7) + 3, getRandomColor())
+        ))
+    }
 
-    s.push(new Rigidbody(
-        { x: w / 3, y: h / 3 },
-        { x: 0, y: 0 },
-        0,
-        0,
-        { x: 0, y: 0 },
-        new Polygon(/*w * 0.1*/70.7, 1, 4, "#00FF00")
-    ))
-
-    s.push(new Rigidbody(
-        { x: w / 6, y: h / 3 },
-        { x: 0, y: 0 },
-        0,
-        0,
-        { x: 0, y: 0 },
-        new Polygon(/*w * 0.1*/70.7, 1, 5, "#FF0000")
-    ))
-
-    s.push(new Rigidbody(
-        { x: w / 3, y: h / 1.5 },
-        { x: 0, y: 0 },
-        0,
-        0,
-        { x: 0, y: 0 },
-        new Polygon(w * 0.1, 1, 6, "#0000FF")
-    ))
-
-    s.push(new Rigidbody(
-        { x: w / 6, y: h / 1.5 },
-        { x: 0, y: 0 },
-        0,
-        0,
-        { x: 0, y: 0 },
-        new Polygon(w * 0.05, 1, 100, "#FFFF00")
-    ))
     requestAnimationFrame(loop)
 }
-
 
 function render() {
     ctx.clearRect(0, 0, window.innerWidth, window.innerHeight)
@@ -299,7 +277,13 @@ function update() {
     }
     if (flag.move) {
         flag.move = false
-        move()
+        selected.setPostion(mouse.cur_pos)
+        move([s.indexOf(selected)], 0)
+        // while (move()) {
+        //     (() => { })();
+        //     // break
+        // }
+
 
         // wall.forEach(e => {
         //     let depth = gjk(selected.shape, e)
@@ -321,43 +305,40 @@ function update() {
         selected.resetShape()
     }
 
-    function move() {
-        selected.setPostion(mouse.cur_pos)
-        for (let i = 0; i < s.length; ++i) {
-            if (s[i] === selected) continue
-            let polygonA = selected.shape,
-                polygonB = s[i].shape,
-                depth = gjk(polygonA, polygonB);
-            // console.log(depth)
-            // return
-            if (depth != -1) {
-                let force = mouse.getDir(),
-                    side = edge(
-                        polygonB.vertex,
-                        {
-                            x: polygonA.x - polygonB.x,
-                            y: polygonA.y - polygonB.y
-                        }
-                    ),
-                    vert_angle = getVerticalAngle(force, side);
-                let force_angle = Math.acos(dot(force, { x: 1, y: 0 }) / length(force))
-                if (force.y < 0) force_angle *= -1
-                // selected.position.x -= depth * Math.cos(vert_angle)
-                // selected.position.y -= depth * Math.sin(vert_angle)
-                // selected.resetShape()
-                s[i].position.x += depth * Math.cos(vert_angle)
-                s[i].position.y += depth * Math.sin(vert_angle)
-                s[i].resetShape()
-                // s[i].force.x = depth * Math.cos(vert_angle)
-                // s[i].force.y = depth * Math.sin(vert_angle)
-                // s[i].force.x = depth * Math.cos(force_angle) * 1
-                // s[i].force.y = depth * Math.sin(force_angle) * 1
-                // s[i].resetShape()
-                // console.log(force)
-                // console.log(force_angle)
-                // console.log(i)
-                // console.log(s[i].force)
+    function move(moved_s, start) {
+        let flag = false
+        for (let i = start; i < moved_s.length; ++i) {
+            let polygonA = s[moved_s[i]].shape
+            for (let j = 0; j < s.length; ++j) {
+                if (moved_s.indexOf(j) != -1) continue
+                let polygonB = s[j].shape,
+                    dist = Math.sqrt((polygonA.x - polygonB.x) ** 2 + (polygonA.y - polygonB.y) ** 2),
+                    depth;
+                if (dist >= polygonA.width + polygonB.width)
+                    continue
+                depth = gjk(polygonA, polygonB)
+                if (depth != -1) {
+                    if (!flag) {
+                        flag = true
+                        start = moved_s.length
+                    }
+                    moved_s.push(j)
+                    let force = mouse.getDir(),
+                        side = edge(
+                            polygonB.vertex,
+                            {
+                                x: polygonA.x - polygonB.x,
+                                y: polygonA.y - polygonB.y
+                            }
+                        ),
+                        vert_angle = getVerticalAngle(force, side);
+                    s[j].position.x += depth * Math.cos(vert_angle)
+                    s[j].position.y += depth * Math.sin(vert_angle)
+                    s[j].resetShape()
+                }
             }
+            if (flag)
+                move(moved_s, start)
         }
     }
 }
@@ -403,47 +384,6 @@ function ptInPolygon(pt, shape) {
     return c
 }
 
-
-onkeydown = onkeyup = function (e) {
-    return
-    key[e.keyCode] = e.type == 'keydown'
-
-    let force = {
-        x: 0,
-        y: 0
-    }
-    if (key[87]) force.y -= 5
-    if (key[83]) force.y += 5
-    if (key[65]) force.x -= 5
-    if (key[68]) force.x += 5
-    if (force.x == 0 && force.y == 0) return
-    s[1].position.x += force.x
-    s[1].position.y += force.y
-    s[1].shape.getVertex(s[1].position.x, s[1].position.y)
-    let depth = gjk(s[1].shape, s[0].shape)
-    if (depth) {
-        let side = edge(
-            s[0].shape.vertex,
-            { x: -force.x, y: -force.y }
-        )
-        side = edge(
-            s[0].shape.vertex,
-            {
-                x: s[1].position.x - s[0].position.x,
-                y: s[1].position.y - s[0].position.y
-            }
-        )
-        let force_v = getVerticalForce(force, side)
-        let f = Math.sqrt(force.x ** 2 + force.y ** 2)
-        this.console.log(
-            depth * Math.cos(force_v.angle),
-            depth * Math.sin(force_v.angle)
-        )
-        s[1].position.x -= depth * Math.cos(force_v.angle)
-        s[1].position.y -= depth * Math.sin(force_v.angle)
-        s[1].shape.getVertex(s[1].position.x, s[1].position.y)
-    }
-}
 
 function edge(vertex, dir) {
     let index = 0
@@ -518,4 +458,13 @@ function dot(vec1, vec2) {
 
 function length(vec) {
     return Math.sqrt(vec.x ** 2 + vec.y ** 2)
+}
+
+function getRandomColor() {
+    var letters = '0123456789ABCDEF';
+    var color = '#';
+    for (var i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
 }

@@ -1,10 +1,10 @@
 # GJK
- 2d collision detection with GJK
+ 2d collision detection and return penetration depth
  
  DEMO: https://miksuki.github.io/GJK/
 # Usage
 ```javascript
-var shape = {
+let shape = {
     x: num, // center x
     y: num, // center y
     vertex = [
@@ -15,7 +15,12 @@ var shape = {
     ]
 };
 
-gjk(shape1, shape2) ;
+let depth = gjk(shape1, shape2) ;
 
 ```
 
+# Return 
+
+* `-1`: no collision
+* `0`: two graphics overlap
+* ` other`: penetration depth
