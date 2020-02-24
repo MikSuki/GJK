@@ -2,7 +2,6 @@ var ctx;
 var s = []
 var wall = []
 var key = { 87: false, 83: false, 65: false, 68: false }
-var transparency = 1
 var start = 0
 var cnt = 0
 const cnt_max = 1
@@ -240,7 +239,7 @@ window.onload = function () {
         0,
         0,
         { x: 0, y: 0 },
-        new Polygon(/*w * 0.1*/70.7, 1, 6, "#00FF00")
+        new Polygon(/*w * 0.1*/70.7, 1, 4, "#00FF00")
     ))
 
     s.push(new Rigidbody(
@@ -251,13 +250,30 @@ window.onload = function () {
         { x: 0, y: 0 },
         new Polygon(/*w * 0.1*/70.7, 1, 5, "#FF0000")
     ))
+
+    s.push(new Rigidbody(
+        { x: w / 3, y: h / 1.5 },
+        { x: 0, y: 0 },
+        0,
+        0,
+        { x: 0, y: 0 },
+        new Polygon(w * 0.1, 1, 6, "#0000FF")
+    ))
+
+    s.push(new Rigidbody(
+        { x: w / 6, y: h / 1.5 },
+        { x: 0, y: 0 },
+        0,
+        0,
+        { x: 0, y: 0 },
+        new Polygon(w * 0.05, 1, 100, "#FFFF00")
+    ))
     requestAnimationFrame(loop)
 }
 
 
 function render() {
     ctx.clearRect(0, 0, window.innerWidth, window.innerHeight)
-    ctx.globalAlpha = transparency
     s.forEach(e => {
         e.shape.draw(ctx)
     })
@@ -342,8 +358,6 @@ function update() {
                 // console.log(i)
                 // console.log(s[i].force)
             }
-            else
-                transparency = 1
         }
     }
 }
