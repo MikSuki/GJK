@@ -209,8 +209,7 @@ var gjk = function (shape1, shape2) {
                     }
                 }
             }
-            let p = null
-            p = support(closest.normal)
+            let p = support(closest.normal)
 
             dist = dot(p, closest.normal)
             if (dist - closest.dist < ACCURACY) {

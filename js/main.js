@@ -1,17 +1,12 @@
-var ctx;
-var s = []
-var wall = []
-var key = { 87: false, 83: false, 65: false, 68: false }
-var start = 0
-var cnt = 0
-const cnt_max = 1
-var flag = {
+const shape_num = 100;
+const s = [];
+const key = { 87: false, 83: false, 65: false, 68: false };
+const flag = {
     click_axis: false,
     click_shape: false,
     move: false,
-    rotate: false
-}
-var mouse = {
+};
+const mouse = {
     prev_pos: {
         x: 0,
         y: 0
@@ -33,296 +28,172 @@ var mouse = {
         this.cur_pos.y = e.y - offsetY
     }
 
-}
-
-const gravity = 0//9.8
-
-var stop = false
-
-var selected = null
-
-var c = 0
-var t = 0
-
-class Rigidbody {
-    constructor(position, linearVelocity, angle, angularVelocity, force, shape) {
-        this.position = position
-        this.movement = { x: 0, y: 0 }
-        this.linearVelocity = linearVelocity
-        this.angle = angle
-        this.angularVelocity = angularVelocity
-        this.force = force
-        this.torque = null
-        this.shape = shape
-        this.resetShape()
-    }
-
-    computeForceAndTorque() {
-        let f = this.force//{ x: 0, y: 0 }
-        this.force.y += gravity
-        // r is the 'arm vector' that goes from the center of mass to the point of force application
-        let r = {
-            x: 0 * this.shape.width * 2,
-            y: 0 * this.shape.height * 2
-        }
-        // this.force = f
-        this.torque = r.x * f.y - r.y * f.x
-    }
-
-    setPostion(pos) {
-        this.position.x = pos.x
-        this.position.y = pos.y
-        this.resetShape()
-    }
-
-    resetShape() {
-        this.shape.reset(this.position, this.angle / 180 * Math.PI)
-    }
-
-    update(dt) {
-        this.computeForceAndTorque()
-        let linearAcceleration = {
-            x: this.force.x / this.shape.mass,
-            y: this.force.y / this.shape.mass
-        }
-        this.linearVelocity.x += linearAcceleration.x * dt
-        this.linearVelocity.y += linearAcceleration.y * dt
-        this.position.x += this.linearVelocity.x * dt
-        this.position.y += this.linearVelocity.y * dt
-        let angularAcceleration = this.torque / this.shape.momentOfInertia
-        this.angularVelocity += angularAcceleration * dt
-        this.angle += this.angularVelocity * dt
-        this.resetShape()
-    }
-}
+};
+const wall = {};
+var stop = false;
+var selected = null;
+var ctx = null;
 
 class Polygon {
-    constructor(width, mass, vertex_num, color) {
-        this.x = 0
-        this.y = 0
-        this.width = width
-        this.height = width
-        this.mass = mass
-        this.vertex_num = vertex_num
-        this.vertex = []
-        this.rigid_rotation = 0
-        this.rotation = Math.PI / 4
-        this.color = color
-        this.offsetX = 0
-        this.offsetY = 0
-        this.axis = [
-            { x: 0, y: -3 },
-            { x: 0, y: 3 },
-            { x: width, y: 3 },
-            { x: width, y: -3 },
-        ]
-        this.axis.forEach(e => {
-            e.size = Math.sqrt(e.x ** 2 + e.y ** 2)
-            e.rotation = Math.atan(e.y / e.x)
-        })
-
-        this.CalculateBoxInertia()
+    constructor(x, y, width, vertex_num, rad, color) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.vertex_num = vertex_num;
+        this.vertex = [];
+        this.boundary = null; // minX, minY, maxX, maxX
+        this.rotation = rad;
+        this.color = color;
+        this.offsetX = 0;
+        this.offsetY = 0;
+        this.init();
     }
 
-    CalculateBoxInertia() {
-        this.momentOfInertia = this.mass * (this.width ** 2 + this.height ** 2) / 12
-    }
-
-    reset(position, angle) {
-        var rad = 0
-        this.rigid_rotation = angle
-        this.x = position.x
-        this.y = position.y
+    init() {
+        let rad = 0,
+            boundary = {
+                minX: Number.MAX_SAFE_INTEGER,
+                minY: Number.MAX_SAFE_INTEGER,
+                maxX: Number.MIN_SAFE_INTEGER,
+                maxY: Number.MIN_SAFE_INTEGER
+            };
         this.vertex = []
         for (let i = 0; i < this.vertex_num; ++i) {
+            let x = this.x + this.width * Math.cos(rad - this.rotation),
+                y = this.y + this.width * Math.sin(rad - this.rotation)
+                ;
             this.vertex.push({
-                x: this.x + this.width * Math.cos(rad - this.rotation - this.rigid_rotation),
-                y: this.y + this.width * Math.sin(rad - this.rotation - this.rigid_rotation)
+                x: x,
+                y: y
             })
-            rad += (360 / this.vertex_num) / 180 * Math.PI
+            rad += (360 / this.vertex_num) / 180 * Math.PI;
+            if (x < boundary.minX)
+                boundary.minX = x;
+            if (x > boundary.maxX)
+                boundary.maxX = x;
+            if (y < boundary.minY)
+                boundary.minY = y;
+            if (y > boundary.maxY)
+                boundary.maxY = y;
         }
-        rad = this.rotation
-        // axis
-        this.axis.forEach(e => {
-            e.x = e.size * Math.cos(e.rotation - rad - this.rigid_rotation)
-            e.y = e.size * Math.sin(e.rotation - rad - this.rigid_rotation)
-        })
+        this.boundary = boundary;
+    }
+
+    moveShape(x, y) {
+        this.boundary.minX += x;
+        this.boundary.maxX += x;
+        this.boundary.minY += y;
+        this.boundary.maxY += y;
+        if (this.boundary.minX < wall.minX) {
+            let v = this.boundary.minX - wall.minX;
+            x -= v;
+            this.boundary.minX = wall.minX;
+            this.boundary.maxX -= v;
+        }
+        else if (this.boundary.maxX > wall.maxX) {
+            let v = this.boundary.maxX - wall.maxX;
+            x -= v;
+            this.boundary.minX -= v;
+            this.boundary.maxX = wall.maxX;
+        }
+        if (this.boundary.minY < wall.minY) {
+            let v = this.boundary.minY - wall.minY;
+            y -= v;
+            this.boundary.minY = wall.minY;
+            this.boundary.maxY -= v;
+        }
+        else if (this.boundary.maxY > wall.maxY) {
+            let v = this.boundary.maxY - wall.maxY;
+            y -= v;
+            this.boundary.minY -= v;
+            this.boundary.maxY = wall.maxY;
+        }
+
+        this.x += x;
+        this.y += y;
+        this.vertex.forEach(e => {
+            e.x += x;
+            e.y += y;
+        });
     }
 
     draw(ctx) {
-        ctx.fillStyle = this.color
-        ctx.beginPath()
-        ctx.moveTo(this.vertex[0].x, this.vertex[0].y)
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.moveTo(this.vertex[0].x, this.vertex[0].y);
         for (let i = 1; i < this.vertex_num; ++i)
-            ctx.lineTo(this.vertex[i].x, this.vertex[i].y)
-        ctx.fill()
+            ctx.lineTo(this.vertex[i].x, this.vertex[i].y);
+        ctx.fill();
+    }
 
-        ctx.fillStyle = '#000000'
-        // text
-        // ctx.fillStyle = '#000000'
-        // ctx.font = "30px Arial";
-        // for (let i = 0; i < this.vertex_num; ++i)
-        //     ctx.fillText(i + 1, this.vertex[i].x, this.vertex[i].y)
-
-        // axis
-        // ctx.beginPath()
-        // ctx.moveTo(this.vertex[0].x + this.axis[0].x, this.vertex[0].y + this.axis[0].y)
-        // for (let i = 1; i < this.axis.length; ++i)
-        //     ctx.lineTo(this.vertex[0].x + this.axis[i].x, this.vertex[0].y + this.axis[i].y)
-        // ctx.fill()
-
-        return
-
-
-        for (let i = 0; i < this.vertex_num; ++i) {
-            ctx.beginPath()
-            ctx.moveTo(this.x, this.y)
-            ctx.lineTo(this.vertex[i].x, this.vertex[i].y)
-            ctx.stroke()
-        }
+    setPostion(pos) {
+        let x = pos.x - this.x,
+            y = pos.y - this.y;
+        this.moveShape(x, y)
     }
 
     isclick(x, y) {
-        if (ptInPolygon({ x: x - this.vertex[0].x, y: y - this.vertex[0].y }, this.axis)) {
-            this.offsetX = x - this.x
-            this.offsetY = y - this.y
-            flag.click_axis = true
-            return true
-        }
         if (ptInPolygon({ x: x, y: y }, this.vertex)) {
-            this.offsetX = x - this.x
-            this.offsetY = y - this.y
-            flag.click_shape = true
-            return true
+            this.offsetX = x - this.x;
+            this.offsetY = y - this.y;
+            flag.click_shape = true;
+            return true;
         }
-    }
-}
-
-class Wall {
-    constructor(x, y, w, h) {
-        this.x = x
-        this.y = y
-        // this.w = w
-        // this.h = h
-        this.x1 = x - w / 2
-        this.x2 = x + w / 2
-        this.y1 = y - h / 2
-        this.y2 = y + h / 2
-        this.vertex = []
-        this.vertex.push(
-            { x: this.x1, y: this.y1 },
-            { x: this.x2, y: this.y1 },
-            { x: this.x1, y: this.y2 },
-            { x: this.x2, y: this.y2 },
-        )
     }
 }
 
 window.onload = function () {
-    var canvas = document.getElementById('canvas')
-    ctx = canvas.getContext('2d')
-    let [w, h] = [window.innerWidth, window.innerHeight]
-    canvas.width = w
-    canvas.height = h
-    canvas.onmousedown = mouseclick
-    canvas.onmousemove = mousemove
-    canvas.onmouseup = mouseup
-
-    wall.push(new Wall(w / 2, -h * 0.05, w, h * 0.1))
-    wall.push(new Wall(w / 2, h * 1.05, w, h * 0.1))
-    wall.push(new Wall(-w * 0.05, h * 0.5, w * 0.1, h * 1.2))
-    wall.push(new Wall(w * 1.05, h * 0.5, w * 0.1, h * 1.2))
-
-    for (let i = 0; i < 50; ++i) {
-        let [d1, d2] = [Math.random() + 0.01, Math.random() + 0.01]
-        if (d1 > 0.9) d1 = 0.9
-        if (d2 > 0.9) d2 = 0.9
-        s.push(new Rigidbody(
-            { x: w * d1, y: h * d2 },
-            { x: 0, y: 0 },
-            0,
-            0,
-            { x: 0, y: 0 },
-            new Polygon(w * (Math.floor(Math.random() * 5) + 1) * 0.02, 1, Math.floor(Math.random() * 7) + 3, getRandomColor())
-        ))
+    let canvas = document.getElementById('canvas'),
+        [w, h] = [window.innerWidth, window.innerHeight];;
+    ctx = canvas.getContext('2d');
+    canvas.width = w;
+    canvas.height = h;
+    canvas.onmousedown = mouseclick;
+    canvas.onmousemove = mousemove;
+    canvas.onmouseup = mouseup;
+    wall.minX = 0;
+    wall.minY = 0;
+    wall.maxX = w;
+    wall.maxY = h;
+    for (let i = 0; i < shape_num; ++i) {
+        let [d1, d2] = [Math.random() + 0.01, Math.random() + 0.01];
+        if (d1 > 0.9) d1 = 0.9;
+        if (d2 > 0.9) d2 = 0.9;
+        s.push(
+            new Polygon(
+                w * d1,
+                h * d2,
+                w * (Math.floor(Math.random() * 2) + 2) * 0.02,
+                Math.floor(Math.random() * 7) + 3,
+                Math.floor(Math.random() * 315) / 100,
+                getRandomColor()
+            )
+        );
     }
-
-    requestAnimationFrame(loop)
-}
-
-function render() {
-    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight)
-    s.forEach(e => {
-        e.shape.draw(ctx)
-    })
-}
-
-function loop(timestamp) {
-    let dt = timestamp - start
-    start = timestamp
-
-    s.forEach(e => {
-        e.update(dt / 1000)
-    })
-
-    update()
-    render()
-    requestAnimationFrame(loop)
+    requestAnimationFrame(loop);
 }
 
 function update() {
-    if (flag.rotate) {
-        flag.rotate = false
-        rotate()
-    }
     if (flag.move) {
-        flag.move = false
-        selected.setPostion(mouse.cur_pos)
-        move([s.indexOf(selected)], 0)
-        // while (move()) {
-        //     (() => { })();
-        //     // break
-        // }
-
-
-        // wall.forEach(e => {
-        //     let depth = gjk(selected.shape, e)
-        //     if (depth) console.log('co')
-        // })
+        flag.move = false;
+        selected.setPostion(mouse.cur_pos);
+        collide([s.indexOf(selected)]);
     }
 
-    function rotate() {
-        let Polygon = selected.shape
-        let [x, y] = [
-            selected.position.x - mouse.cur_pos.x - selected.shape.offsetX,
-            selected.position.y - mouse.cur_pos.y - selected.shape.offsetY
-        ]
-        let dot = -x
-        let len = Math.sqrt(x ** 2 + y ** 2)
-        let rad = Math.acos(dot / len)
-        if (y < 0) rad = - rad
-        Polygon.rotation = rad
-        selected.resetShape()
-    }
-
-    function move(moved_s, start) {
-        let flag = false
-        for (let i = start; i < moved_s.length; ++i) {
-            let polygonA = s[moved_s[i]].shape
+    function collide(collider_s) {
+        for (let i = 0; i < collider_s.length; ++i) {
+            let polygonA = s[collider_s[i]];
             for (let j = 0; j < s.length; ++j) {
-                if (moved_s.indexOf(j) != -1) continue
-                let polygonB = s[j].shape,
-                    dist = Math.sqrt((polygonA.x - polygonB.x) ** 2 + (polygonA.y - polygonB.y) ** 2),
-                    depth;
+                if (collider_s.indexOf(j) != -1) continue;
+                let polygonB = s[j],
+                    dist = Math.sqrt((polygonA.x - polygonB.x) ** 2 + (polygonA.y - polygonB.y) ** 2)
+                    ;
                 if (dist >= polygonA.width + polygonB.width)
-                    continue
-                depth = gjk(polygonA, polygonB)
+                    continue;
+                let depth = gjk(polygonA, polygonB);
                 if (depth != -1) {
-                    if (!flag) {
-                        flag = true
-                        start = moved_s.length
-                    }
-                    moved_s.push(j)
+                    // dynamic increase collider_s
+                    collider_s.push(j);
                     let force = mouse.getDir(),
                         side = edge(
                             polygonB.vertex,
@@ -332,20 +203,32 @@ function update() {
                             }
                         ),
                         vert_angle = getVerticalAngle(force, side);
-                    s[j].position.x += depth * Math.cos(vert_angle)
-                    s[j].position.y += depth * Math.sin(vert_angle)
-                    s[j].resetShape()
+                    s[j].moveShape(
+                        depth * Math.cos(vert_angle),
+                        depth * Math.sin(vert_angle)
+                    );
                 }
             }
-            if (flag)
-                move(moved_s, start)
         }
     }
 }
 
+function render() {
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    for (let i = s.length - 1; i >= 0; --i)
+        s[i].draw(ctx);
+}
+
+function loop() {
+    update()
+    render()
+    requestAnimationFrame(loop)
+}
+
+
 function mouseclick(e) {
     s.every(obj => {
-        let ele = obj.shape
+        let ele = obj
         if (ele.isclick(e.clientX, e.clientY)) {
             selected = obj
             return false
@@ -356,12 +239,8 @@ function mouseclick(e) {
 
 function mousemove(e) {
     if (stop) return
-    if (flag.click_axis) {
-        mouse.update(e, selected.shape.offsetX, selected.shape.offsetY)
-        flag.rotate = true
-    }
     if (flag.click_shape) {
-        mouse.update(e, selected.shape.offsetX, selected.shape.offsetY)
+        mouse.update(e, selected.offsetX, selected.offsetY)
         flag.move = true
     }
 }
@@ -370,7 +249,6 @@ function mouseup() {
     flag.click_shape = false
     flag.click_axis = false
 }
-
 
 function ptInPolygon(pt, shape) {
     let i = 0,
@@ -383,7 +261,6 @@ function ptInPolygon(pt, shape) {
     }
     return c
 }
-
 
 function edge(vertex, dir) {
     let index = 0
@@ -448,9 +325,6 @@ function getVerticalAngle(force, side) {
     if (side.y < 0) side_angle *= -1
     return side_angle - 1.571
 }
-
-
-
 
 function dot(vec1, vec2) {
     return vec1.x * vec2.x + vec1.y * vec2.y
