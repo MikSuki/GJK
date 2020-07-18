@@ -1,4 +1,4 @@
-const shape_num = 100;
+const number_of_shape = 80;
 const s = [];
 const key = { 87: false, 83: false, 65: false, 68: false };
 const flag = {
@@ -24,8 +24,8 @@ const mouse = {
     update: function (e, offsetX, offsetY) {
         this.prev_pos.x = this.cur_pos.x
         this.prev_pos.y = this.cur_pos.y
-        this.cur_pos.x = e.x - offsetX
-        this.cur_pos.y = e.y - offsetY
+        this.cur_pos.x = e.clientX - offsetX
+        this.cur_pos.y = e.clientY - offsetY
     }
 
 };
@@ -144,18 +144,31 @@ class Polygon {
 
 window.onload = function () {
     let canvas = document.getElementById('canvas'),
-        [w, h] = [window.innerWidth, window.innerHeight];;
+        [w, h] = [window.innerWidth, window.innerHeight];
     ctx = canvas.getContext('2d');
     canvas.width = w;
     canvas.height = h;
     canvas.onmousedown = mouseclick;
     canvas.onmousemove = mousemove;
     canvas.onmouseup = mouseup;
+    canvas.ontouchstart = function (e) {
+        e.preventDefault()
+        mouseclick(e.touches[0])
+    }
+    canvas.ontouchmove = function (e) {
+        e.preventDefault()
+        mousemove(e.touches[0])
+    }
+    canvas.ontouchend = function (e) {
+        e.preventDefault()
+        mouseup()
+    }
     wall.minX = 0;
     wall.minY = 0;
     wall.maxX = w;
     wall.maxY = h;
-    for (let i = 0; i < shape_num; ++i) {
+    const shape_max = w > h ? w : h
+    for (let i = 0; i < number_of_shape; ++i) {
         let [d1, d2] = [Math.random() + 0.01, Math.random() + 0.01];
         if (d1 > 0.9) d1 = 0.9;
         if (d2 > 0.9) d2 = 0.9;
@@ -163,7 +176,7 @@ window.onload = function () {
             new Polygon(
                 w * d1,
                 h * d2,
-                w * (Math.floor(Math.random() * 2) + 2) * 0.02,
+                shape_max * (Math.floor(Math.random() * 2) + 2) * 0.02,
                 Math.floor(Math.random() * 7) + 3,
                 Math.floor(Math.random() * 315) / 100,
                 getRandomColor()
