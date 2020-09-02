@@ -1,6 +1,8 @@
 # GJK
  2d collision detection and return penetration depth
  
+ ![image](https://github.com/MikSuki/GJK/blob/master/intro.gif)
+ 
  DEMO: https://miksuki.github.io/GJK/
 # Usage
 ```javascript
