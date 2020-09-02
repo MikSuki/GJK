@@ -1,6 +1,5 @@
 const number_of_shape = 80;
 const s = [];
-const key = { 87: false, 83: false, 65: false, 68: false };
 const flag = {
     click_axis: false,
     click_shape: false,
@@ -207,15 +206,14 @@ function update() {
                 if (depth != -1) {
                     // dynamic increase collider_s
                     collider_s.push(j);
-                    let force = mouse.getDir(),
-                        side = edge(
+                    let side = edge(
                             polygonB.vertex,
                             {
                                 x: polygonA.x - polygonB.x,
                                 y: polygonA.y - polygonB.y
                             }
                         ),
-                        vert_angle = getVerticalAngle(force, side);
+                        vert_angle = getVerticalAngle(side);
                     s[j].moveShape(
                         depth * Math.cos(vert_angle),
                         depth * Math.sin(vert_angle)
@@ -312,8 +310,6 @@ function edge(vertex, dir) {
                 b = i
             }
         }
-        // console.log(a + 1, b + 1)
-        // console.log(vertex[a], vertex[b])
         return {
             x: vertex[a].x - vertex[b].x,
             y: vertex[a].y - vertex[b].y
@@ -333,7 +329,7 @@ function edge(vertex, dir) {
     }
 }
 
-function getVerticalAngle(force, side) {
+function getVerticalAngle(side) {
     let side_angle = Math.acos(dot(side, { x: 1, y: 0 }) / length(side))
     if (side.y < 0) side_angle *= -1
     return side_angle - 1.571
