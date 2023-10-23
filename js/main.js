@@ -83,30 +83,31 @@ class Polygon {
         this.boundary.maxX += x;
         this.boundary.minY += y;
         this.boundary.maxY += y;
-        if (this.boundary.minX < wall.minX) {
-            let v = this.boundary.minX - wall.minX;
-            x -= v;
-            this.boundary.minX = wall.minX;
-            this.boundary.maxX -= v;
-        }
-        else if (this.boundary.maxX > wall.maxX) {
-            let v = this.boundary.maxX - wall.maxX;
-            x -= v;
-            this.boundary.minX -= v;
-            this.boundary.maxX = wall.maxX;
-        }
-        if (this.boundary.minY < wall.minY) {
-            let v = this.boundary.minY - wall.minY;
-            y -= v;
-            this.boundary.minY = wall.minY;
-            this.boundary.maxY -= v;
-        }
-        else if (this.boundary.maxY > wall.maxY) {
-            let v = this.boundary.maxY - wall.maxY;
-            y -= v;
-            this.boundary.minY -= v;
-            this.boundary.maxY = wall.maxY;
-        }
+        // disable out object of screen
+        // if (this.boundary.minX < wall.minX) {
+        //     let v = this.boundary.minX - wall.minX;
+        //     x -= v;
+        //     this.boundary.minX = wall.minX;
+        //     this.boundary.maxX -= v;
+        // }
+        // else if (this.boundary.maxX > wall.maxX) {
+        //     let v = this.boundary.maxX - wall.maxX;
+        //     x -= v;
+        //     this.boundary.minX -= v;
+        //     this.boundary.maxX = wall.maxX;
+        // }
+        // if (this.boundary.minY < wall.minY) {
+        //     let v = this.boundary.minY - wall.minY;
+        //     y -= v;
+        //     this.boundary.minY = wall.minY;
+        //     this.boundary.maxY -= v;
+        // }
+        // else if (this.boundary.maxY > wall.maxY) {
+        //     let v = this.boundary.maxY - wall.maxY;
+        //     y -= v;
+        //     this.boundary.minY -= v;
+        //     this.boundary.maxY = wall.maxY;
+        // }
 
         this.x += x;
         this.y += y;
